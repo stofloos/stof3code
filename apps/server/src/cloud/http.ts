@@ -592,10 +592,8 @@ const reconcileDesiredCloudLinkWith = Effect.fn("environment.cloud.reconcileDesi
   ),
   Effect.catchTags({
     CloudCliCredentialRemovalError: failCloudCliTokenManagerError,
-    CloudCliCredentialRefreshError: failCloudCliTokenManagerError,
     CloudCliCredentialReadError: failCloudCliTokenManagerError,
     CloudCliAuthorizationError: failCloudCliTokenManagerError,
-    CloudCliAuthorizationTimeoutError: failCloudCliTokenManagerError,
   }),
 );
 
