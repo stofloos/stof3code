@@ -12,6 +12,11 @@ describe("normalizeSecureRelayUrl", () => {
     );
   });
 
+  it("allows http only for loopback hosts (local dev)", () => {
+    expect(normalizeSecureRelayUrl("http://localhost:8787")).toBe("http://localhost:8787");
+    expect(normalizeSecureRelayUrl("http://127.0.0.1:8787/")).toBe("http://127.0.0.1:8787");
+  });
+
   it.each([
     "http://relay.example.test",
     "https://user:password@relay.example.test",

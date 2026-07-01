@@ -1,80 +1,66 @@
-name: Deploy T3 Connect relay
+name: Build & publish relay image
+
+# The self-hosted Stofloos relay is a Bun + SQLite container (infra/relay/Dockerfile)
+# deployed to your own Docker Swarm. This workflow builds the image and pushes it to
+# GHCR; deploy it on your Swarm with `docker stack deploy -c infra/relay/stack.yml`
+# after pointing the stack's image at the published tag. (Replaces the retired
+# Alchemy/Cloudflare/PlanetScale deploy.)
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "infra/relay/**"
+      - "packages/contracts/**"
+      - "packages/shared/**"
+      - "packages/client-runtime/**"
+      - ".github/workflows/deploy-relay.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: none
-  statuses: write
+  packages: write
 
 concurrency:
-  group: relay-production
-  cancel-in-progress: false
+  group: relay-image
+  cancel-in-progress: true
 
 jobs:
-  deploy_relay:
-    name: Deploy production relay
-    runs-on: blacksmith-8vcpu-ubuntu-2404
-    timeout-minutes: 15
-    environment:
-      name: production
-    env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      PLANETSCALE_ORGANIZATION: ${{ vars.PLANETSCALE_ORGANIZATION }}
-      AXIOM_ORG_ID: ${{ vars.AXIOM_ORG_ID }}
-      RELAY_DOMAIN: ${{ vars.RELAY_DOMAIN }}
-      RELAY_API_ZONE_NAME: ${{ vars.RELAY_API_ZONE_NAME }}
-      RELAY_TUNNEL_ZONE_NAME: ${{ vars.RELAY_TUNNEL_ZONE_NAME }}
-      CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PUBLISHABLE_KEY }}
-      CLERK_JWT_AUDIENCE: ${{ vars.CLERK_JWT_AUDIENCE }}
-      APNS_ENVIRONMENT: ${{ vars.APNS_ENVIRONMENT }}
-      APNS_TEAM_ID: ${{ vars.APNS_TEAM_ID }}
-      APNS_KEY_ID: ${{ vars.APNS_KEY_ID }}
-      APNS_BUNDLE_ID: ${{ vars.APNS_BUNDLE_ID }}
-      ALCHEMY_TELEMETRY_DISABLED: "1"
+  build_relay_image:
+    name: Build & push relay image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          node-version-file: package.json
-          cache: true
-          run-install: true
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Deploy production relay stage
-        id: deploy
-        run: vp run --filter t3code-relay deploy --stage prod --yes --github-output
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          PLANETSCALE_API_TOKEN_ID: ${{ secrets.PLANETSCALE_API_TOKEN_ID }}
-          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
-          AXIOM_TOKEN: ${{ secrets.AXIOM_TOKEN }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          APNS_PRIVATE_KEY: ${{ secrets.APNS_PRIVATE_KEY }}
-
-      - name: Publish relay deploy commit status
-        uses: actions/github-script@v8
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          script: |
-            const result = "${{ steps.deploy.outputs.result }}";
-            const changed = "${{ steps.deploy.outputs.changed }}" === "true";
-            const description = changed
-              ? "Relay production deploy applied infrastructure changes."
-              : result === "noop"
-                ? "Relay production deploy was a no-op."
-                : `Relay production deploy completed with result: ${result}.`;
+          images: ghcr.io/${{ github.repository }}/stofloos-relay
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
 
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: "success",
-              context: "Relay deploy / production",
-              description,
-              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-            });
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/relay/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

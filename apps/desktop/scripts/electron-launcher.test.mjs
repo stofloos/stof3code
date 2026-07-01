@@ -22,7 +22,7 @@ describe("electron development launcher", () => {
     assert.notInclude(script, "\nexport VITE_DEV_SERVER_URL=");
     assert.include(
       script,
-      "exec '/repo/node_modules/electron/Electron' --t3code-dev-root='/repo/apps/desktop' '/repo/apps/desktop/dist-electron/main.cjs' \"$@\"",
+      "exec '/repo/node_modules/electron/Electron' --stofloos-dev-root='/repo/apps/desktop' '/repo/apps/desktop/dist-electron/main.cjs' \"$@\"",
     );
   });
 });

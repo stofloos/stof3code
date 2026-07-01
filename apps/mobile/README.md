@@ -63,36 +63,24 @@ node ../../scripts/mobile-native-static-check.ts
 
 The native lint task runs SwiftLint for Swift plus ktlint and detekt for Kotlin. Missing native tools are reported as warnings and skipped locally. CI installs the default toolset from `apps/mobile/Brewfile` before running the native checks.
 
-## EAS Builds
+## Local builds (no EAS)
 
-CI uses Expo fingerprinting with the `preview:dev` profile to reuse an existing compatible build when possible, or start a new internal EAS build when native runtime inputs change. Production and default local builds continue to use the `appVersion` runtime policy.
+Builds run locally via `expo prebuild` + Gradle/Xcode. The only runtime config is
+`T3CODE_RELAY_URL` (your relay origin) in the repo-root `.env`. See the top-level
+[`BUILD.md`](../../BUILD.md) for full prerequisites (Android SDK + JDK 17, Xcode + CocoaPods) and
+signing notes.
 
-For preview or production EAS environments, set `T3CODE_CLERK_PUBLISHABLE_KEY`,
-`T3CODE_CLERK_JWT_TEMPLATE`, and `T3CODE_RELAY_URL`
-as EAS environment variables. Expo config maps the canonical values into the mobile build.
-
-Create a PR preview dev-client build manually:
+Android:
 
 ```bash
-vp run eas:ios:preview:dev
+pnpm --filter @t3tools/mobile android:prod        # debug build + run on emulator/device
+pnpm --filter @t3tools/mobile build:android        # release APK
+pnpm --filter @t3tools/mobile build:android:aab    # release AAB (Play)
 ```
 
-Create a cloud dev-client build:
+iOS (macOS + Xcode):
 
 ```bash
-vp run eas:ios:dev
-```
-
-Create a persistent preview build:
-
-```bash
-vp run eas:ios:preview
-```
-
-Android equivalents:
-
-```bash
-vp run eas:android:dev
-vp run eas:android:preview:dev
-vp run eas:android:preview
+pnpm --filter @t3tools/mobile build:ios            # prebuild + build & run (Release)
+pnpm --filter @t3tools/mobile prebuild:ios         # generate ios/ then archive in Xcode
 ```

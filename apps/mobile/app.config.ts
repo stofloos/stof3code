@@ -20,25 +20,25 @@ const VARIANT_CONFIG: Record<
   }
 > = {
   development: {
-    appName: "T3 Code Dev",
-    scheme: "t3code-dev",
+    appName: "Stofloos Dev",
+    scheme: "stofloos-dev",
     iosIcon: "./assets/icon-composer-dev.icon",
-    iosBundleIdentifier: "com.t3tools.t3code.dev",
-    androidPackage: "com.t3tools.t3code.dev",
+    iosBundleIdentifier: "nl.stofloos.dev",
+    androidPackage: "nl.stofloos.dev",
   },
   preview: {
-    appName: "T3 Code Preview",
-    scheme: "t3code-preview",
+    appName: "Stofloos Preview",
+    scheme: "stofloos-preview",
     iosIcon: "./assets/icon-composer-prod.icon",
-    iosBundleIdentifier: "com.t3tools.t3code.preview",
-    androidPackage: "com.t3tools.t3code.preview",
+    iosBundleIdentifier: "nl.stofloos.preview",
+    androidPackage: "nl.stofloos.preview",
   },
   production: {
-    appName: "T3 Code",
-    scheme: "t3code",
+    appName: "Stofloos",
+    scheme: "stofloos",
     iosIcon: "./assets/icon-composer-prod.icon",
-    iosBundleIdentifier: "com.t3tools.t3code",
-    androidPackage: "com.t3tools.t3code",
+    iosBundleIdentifier: "nl.stofloos",
+    androidPackage: "nl.stofloos",
   },
 };
 
@@ -57,7 +57,7 @@ const variant = VARIANT_CONFIG[APP_VARIANT];
 
 const config: ExpoConfig = {
   name: variant.appName,
-  slug: "t3-code",
+  slug: "stofloos",
   platforms: ["ios", "android"],
   scheme: variant.scheme,
   version: "0.1.0",
@@ -68,8 +68,11 @@ const config: ExpoConfig = {
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
   updates: {
-    enabled: true,
-    url: "https://u.expo.dev/d763fcb8-d37c-41ea-a773-b54a0ab4a454",
+    // Set EAS_PROJECT_ID (your own Expo project) to enable OTA updates.
+    enabled: Boolean(repoEnv.EAS_PROJECT_ID),
+    ...(repoEnv.EAS_PROJECT_ID
+      ? { url: `https://u.expo.dev/${repoEnv.EAS_PROJECT_ID}` }
+      : {}),
     checkAutomatically: "ON_LOAD",
     fallbackToCacheTimeout: 0,
   },
@@ -82,7 +85,7 @@ const config: ExpoConfig = {
         NSAllowsArbitraryLoads: true,
       },
       NSLocalNetworkUsageDescription:
-        "Allow T3 Code to connect to T3 Code servers on your local network or tailnet.",
+        "Allow Stofloos to connect to Stofloos servers on your local network or tailnet.",
       ITSAppUsesNonExemptEncryption: false,
     },
   },
@@ -108,7 +111,7 @@ const config: ExpoConfig = {
     [
       "expo-camera",
       {
-        cameraPermission: "Allow T3 Code to access your camera so you can scan pairing QR codes.",
+        cameraPermission: "Allow Stofloos to access your camera so you can scan pairing QR codes.",
         barcodeScannerEnabled: true,
       },
     ],
@@ -148,7 +151,7 @@ const config: ExpoConfig = {
           {
             name: "AgentActivity",
             displayName: "Agent Activity",
-            description: "Shows the current state of active T3 Code agents.",
+            description: "Shows the current state of active Stofloos agents.",
             supportedFamilies: ["systemSmall", "systemMedium", "accessoryRectangular"],
           },
         ],
@@ -166,11 +169,10 @@ const config: ExpoConfig = {
       tracesDataset: repoEnv.EXPO_PUBLIC_OTLP_TRACES_DATASET ?? null,
       tracesToken: repoEnv.EXPO_PUBLIC_OTLP_TRACES_TOKEN ?? null,
     },
-    eas: {
-      projectId: "d763fcb8-d37c-41ea-a773-b54a0ab4a454",
-    },
+    ...(repoEnv.EAS_PROJECT_ID ? { eas: { projectId: repoEnv.EAS_PROJECT_ID } } : {}),
   },
-  owner: "pingdotgg",
+  // Set EAS_OWNER to your Expo account/organization slug.
+  ...(repoEnv.EAS_OWNER ? { owner: repoEnv.EAS_OWNER } : {}),
 };
 
 export default config;
