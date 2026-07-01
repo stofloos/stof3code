@@ -74,8 +74,7 @@ function ConfiguredSettingsRouteScreen() {
   const insets = useSafeAreaInsets();
   const { push } = useRouter();
   const { expand: expandClerkSheet } = useClerkSettingsSheetDetent();
-  const { getToken, isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
-  const { user } = useUser();
+  const { getToken, isLoaded, isSignedIn, email } = useRelayAuth();
   const { savedConnectionsById } = useSavedRemoteConnections();
   const [notificationStatus, setNotificationStatus] = useState<NotificationStatus>("checking");
   const [liveActivityStatus, setLiveActivityStatus] = useState<LiveActivityStatus>("checking");
@@ -84,9 +83,9 @@ function ConfiguredSettingsRouteScreen() {
   const environmentCount = connections.length;
   const accountLabel = useMemo(() => {
     if (!isLoaded) return "Checking";
-    if (!isSignedIn) return "Request access";
-    return user?.primaryEmailAddress?.emailAddress ?? "Signed in";
-  }, [isLoaded, isSignedIn, user?.primaryEmailAddress?.emailAddress]);
+    if (!isSignedIn) return "Sign in";
+    return email ?? "Signed in";
+  }, [isLoaded, isSignedIn, email]);
 
   const refreshNotifications = useCallback(async () => {
     if (process.env.EXPO_OS !== "ios") {
@@ -179,11 +178,11 @@ function ConfiguredSettingsRouteScreen() {
 
   const promptSignIn = useCallback(() => {
     Alert.alert(
-      "Request T3 Cloud access",
-      "Live Activity updates require approved T3 Cloud access so relay can deliver updates to this device.",
+      "Sign in to Stofloos Cloud",
+      "Live Activity updates require a Stofloos Cloud account so the relay can deliver updates to this device.",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Continue", onPress: () => push("/settings/waitlist") },
+        { text: "Continue", onPress: () => push("/settings/auth") },
       ],
     );
   }, [push]);
@@ -195,7 +194,7 @@ function ConfiguredSettingsRouteScreen() {
     }
 
     setLiveActivityStatus("linking");
-    const tokenResult = await settlePromise(() => getToken(resolveRelayClerkTokenOptions()));
+    const tokenResult = await settlePromise(() => getToken());
     if (tokenResult._tag === "Failure") {
       setLiveActivityStatus("disabled");
       const error = squashAtomCommandFailure(tokenResult);
@@ -268,9 +267,7 @@ function ConfiguredSettingsRouteScreen() {
         void (async () => {
           let token: string | null = null;
           if (isSignedIn) {
-            const tokenResult = await settlePromise(() =>
-              getToken(resolveRelayClerkTokenOptions()),
-            );
+            const tokenResult = await settlePromise(() => getToken());
             if (tokenResult._tag === "Failure") {
               reportAtomCommandResult(tokenResult, {
                 label: "live activity disable token lookup",
@@ -313,7 +310,8 @@ function ConfiguredSettingsRouteScreen() {
   const openAccount = useCallback(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
-      push("/settings/waitlist");
+      expandClerkSheet();
+      push("/settings/auth");
       return;
     }
     expandClerkSheet();

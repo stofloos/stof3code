@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/expo";
 import { Stack, useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import {
@@ -24,6 +23,7 @@ import {
   useConnectionController,
 } from "../../features/connection/useConnectionController";
 import { hasCloudPublicConfig } from "../../features/cloud/publicConfig";
+import { useRelayAuth } from "../../features/cloud/useRelayAuth";
 import { availableCloudEnvironmentPresentation } from "../../features/cloud/cloudEnvironmentPresentation";
 import { ConnectionEnvironmentRow } from "../../features/connection/ConnectionEnvironmentRow";
 import { ConnectionStatusDot } from "../../features/connection/ConnectionStatusDot";
@@ -133,7 +133,7 @@ function ConfiguredCloudEnvironmentRows(props: {
   readonly connectedCloudEnvironments: ReadonlyArray<ConnectedEnvironmentSummary>;
   readonly onReconnectEnvironment: (environmentId: EnvironmentId) => void;
 }) {
-  const { isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
+  const { isSignedIn } = useRelayAuth();
   const controller = useConnectionController();
   const iconColor = useThemeColor("--color-icon");
   const availableCloudEnvironments = controller.availableRelayEnvironments;
