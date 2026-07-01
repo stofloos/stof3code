@@ -73,8 +73,7 @@ const isEnvironmentCloudApiError = Schema.is(
   ]),
 );
 
-const MANAGED_ENDPOINT_PROVIDER_KIND =
-  "cloudflare_tunnel" satisfies RelayManagedEndpointProviderKind;
+const MANAGED_ENDPOINT_PROVIDER_KIND = "manual" satisfies RelayManagedEndpointProviderKind;
 
 function cloudEnvironmentLinkError(message: string) {
   return (cause: unknown) => {
@@ -288,7 +287,7 @@ export function linkEnvironmentToCloud(input: {
         payload: {
           notificationsEnabled: true,
           liveActivitiesEnabled,
-          managedTunnelsEnabled: true,
+          managedTunnelsEnabled: false,
         },
       })
       .pipe(
@@ -320,7 +319,7 @@ export function linkEnvironmentToCloud(input: {
           proof,
           notificationsEnabled: true,
           liveActivitiesEnabled,
-          managedTunnelsEnabled: true,
+          managedTunnelsEnabled: false,
         },
       })
       .pipe(

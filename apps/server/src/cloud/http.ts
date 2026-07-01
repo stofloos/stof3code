@@ -300,7 +300,8 @@ function isAllowedEndpointOrigin(input: {
 }
 
 function providerKindMatchesRequestedLinkScopes(request: RelayLinkProofRequest): boolean {
-  return request.endpoint.providerKind === "cloudflare_tunnel";
+  // Self-managed build: the environment supplies its own (loopback) endpoint at link time.
+  return request.endpoint.providerKind === "manual";
 }
 
 function hasExactScope(input: {
@@ -379,7 +380,7 @@ const makeCloudLinkProof = Effect.fn("environment.cloud.makeLinkProof")(function
     environmentPublicKey: normalizePemForSignedPayload(keyPair.publicKey),
     endpoint: request.endpoint,
     origin: request.origin,
-    scopes: ["agent_activity_notifications", "managed_tunnels"],
+    scopes: ["agent_activity_notifications"],
   } satisfies RelayEnvironmentLinkProofPayload;
   return yield* signRelayJwt({
     privateKey: keyPair.privateKey,
@@ -544,7 +545,7 @@ const reconcileDesiredCloudLinkWith = Effect.fn("environment.cloud.reconcileDesi
       payload: {
         notificationsEnabled: true,
         liveActivitiesEnabled: true,
-        managedTunnelsEnabled: true,
+        managedTunnelsEnabled: false,
       },
       schema: RelayEnvironmentLinkChallengeResponse,
     });
@@ -556,7 +557,7 @@ const reconcileDesiredCloudLinkWith = Effect.fn("environment.cloud.reconcileDesi
         endpoint: {
           httpBaseUrl: localOrigin,
           wsBaseUrl: localWsOrigin,
-          providerKind: "cloudflare_tunnel",
+          providerKind: "manual",
         },
         origin: {
           localHttpHost: localUrl.hostname,
@@ -572,7 +573,7 @@ const reconcileDesiredCloudLinkWith = Effect.fn("environment.cloud.reconcileDesi
         proof,
         notificationsEnabled: true,
         liveActivitiesEnabled: true,
-        managedTunnelsEnabled: true,
+        managedTunnelsEnabled: false,
       },
       schema: RelayEnvironmentLinkResponse,
     });

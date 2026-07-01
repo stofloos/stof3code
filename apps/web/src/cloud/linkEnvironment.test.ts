@@ -303,7 +303,7 @@ describe("web cloud link environment client", () => {
             endpoint: {
               httpBaseUrl: "https://desktop.example.test",
               wsBaseUrl: "wss://desktop.example.test",
-              providerKind: "cloudflare_tunnel",
+              providerKind: "manual",
             },
             endpointRuntime: null,
             relayIssuer: "https://relay.example.test",

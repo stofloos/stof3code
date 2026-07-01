@@ -95,7 +95,7 @@ function validLinkResponse(environmentId = "env-1") {
     endpoint: {
       httpBaseUrl: "https://managed.example.test/",
       wsBaseUrl: "wss://managed.example.test/ws",
-      providerKind: "cloudflare_tunnel",
+      providerKind: "manual",
     },
     endpointRuntime: {
       providerKind: "cloudflare_tunnel",
@@ -682,7 +682,7 @@ describe("mobile cloud link environment client", () => {
             ...validLinkResponse(),
             endpoint: {
               ...validLinkResponse().endpoint,
-              providerKind: "manual",
+              providerKind: "cloudflare_tunnel",
             },
           }),
         );
@@ -741,7 +741,7 @@ describe("mobile cloud link environment client", () => {
         endpoint: {
           httpBaseUrl: "https://desktop.example.test/",
           wsBaseUrl: "wss://desktop.example.test/ws",
-          providerKind: "cloudflare_tunnel",
+          providerKind: "manual",
         },
         origin: {
           localHttpHost: "127.0.0.1",
@@ -752,7 +752,7 @@ describe("mobile cloud link environment client", () => {
         deviceId: "device-1",
         notificationsEnabled: true,
         liveActivitiesEnabled: false,
-        managedTunnelsEnabled: true,
+        managedTunnelsEnabled: false,
       });
       expect(bodies[3]).toMatchObject({
         cloudUserId: "user_123",

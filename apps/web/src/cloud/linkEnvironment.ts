@@ -205,8 +205,7 @@ function endpointOrigin(httpBaseUrl: string) {
   };
 }
 
-const MANAGED_ENDPOINT_PROVIDER_KIND =
-  "cloudflare_tunnel" satisfies RelayManagedEndpointProviderKind;
+const MANAGED_ENDPOINT_PROVIDER_KIND = "manual" satisfies RelayManagedEndpointProviderKind;
 
 function ensureLinkedEnvironmentMatches(input: {
   readonly expectedEnvironmentId: string;
@@ -408,7 +407,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
         payload: {
           notificationsEnabled: true,
           liveActivitiesEnabled: true,
-          managedTunnelsEnabled: true,
+          managedTunnelsEnabled: false,
         },
       })
       .pipe(
@@ -440,7 +439,7 @@ export function linkPrimaryEnvironmentToCloud(input: {
           proof,
           notificationsEnabled: true,
           liveActivitiesEnabled: true,
-          managedTunnelsEnabled: true,
+          managedTunnelsEnabled: false,
         },
       })
       .pipe(

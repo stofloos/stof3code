@@ -1699,7 +1699,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
-  it.effect("rejects managed cloud link proofs for manual endpoint providers", () =>
+  it.effect("rejects cloud link proofs for non-manual endpoint providers", () =>
     Effect.gen(function* () {
       yield* buildAppUnderTest();
 
@@ -1720,7 +1720,7 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
             wsBaseUrl: linkProofUrl
               .replace("http://", "ws://")
               .replace("/api/connect/link-proof", "/ws"),
-            providerKind: "manual",
+            providerKind: "cloudflare_tunnel",
           },
           origin: {
             localHttpHost: "127.0.0.1",

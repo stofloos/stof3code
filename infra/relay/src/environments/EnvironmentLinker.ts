@@ -110,7 +110,15 @@ function isSecureManagedEndpoint(endpoint: RelayEnvironmentLinkProofPayload["end
   try {
     const httpUrl = new URL(endpoint.httpBaseUrl);
     const wsUrl = new URL(endpoint.wsBaseUrl);
-    return httpUrl.protocol === "https:" && wsUrl.protocol === "wss:";
+    // https/wss everywhere; http/ws is allowed only for loopback hosts (self-managed
+    // local dev), which cannot be intercepted on the network. Mirrors the relay-URL
+    // loopback policy in `@t3tools/shared/relayUrl`.
+    const httpSecure =
+      httpUrl.protocol === "https:" ||
+      (httpUrl.protocol === "http:" && isLoopbackHostname(httpUrl.hostname));
+    const wsSecure =
+      wsUrl.protocol === "wss:" || (wsUrl.protocol === "ws:" && isLoopbackHostname(wsUrl.hostname));
+    return httpSecure && wsSecure;
   } catch {
     return false;
   }
@@ -123,12 +131,16 @@ function normalizeHostname(hostname: string): string {
     .replace(/^\[(.*)\]$/u, "$1");
 }
 
+function isLoopbackHostname(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  return normalized === "127.0.0.1" || normalized === "::1" || normalized === "localhost";
+}
+
 function isLoopbackManagedTunnelOrigin(
   origin: RelayEnvironmentLinkProofPayload["origin"],
 ): boolean {
-  const hostname = normalizeHostname(origin.localHttpHost);
   return (
-    (hostname === "127.0.0.1" || hostname === "::1" || hostname === "localhost") &&
+    isLoopbackHostname(origin.localHttpHost) &&
     Number.isInteger(origin.localHttpPort) &&
     origin.localHttpPort > 0 &&
     origin.localHttpPort <= 65_535
