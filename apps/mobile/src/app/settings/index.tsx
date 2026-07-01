@@ -1,4 +1,4 @@
-import { useAuth, useUser } from "@clerk/expo";
+import { useRelayAuth } from "../../features/cloud/useRelayAuth";
 import * as Notifications from "expo-notifications";
 import { Link, Stack, useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";
@@ -21,10 +21,7 @@ import { requestAgentNotificationPermission } from "../../features/agent-awarene
 import { refreshAgentAwarenessRegistration } from "../../features/agent-awareness/remoteRegistration";
 import { refreshManagedRelayEnvironments } from "../../features/cloud/managedRelayState";
 import { useClerkSettingsSheetDetent } from "../../features/cloud/ClerkSettingsSheetDetent";
-import {
-  hasCloudPublicConfig,
-  resolveRelayClerkTokenOptions,
-} from "../../features/cloud/publicConfig";
+import { hasCloudPublicConfig } from "../../features/cloud/publicConfig";
 import { runtime } from "../../lib/runtime";
 import { loadPreferences } from "../../lib/storage";
 import { useThemeColor } from "../../lib/useThemeColor";
