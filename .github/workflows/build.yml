@@ -46,6 +46,8 @@ jobs:
           node-version-file: package.json
           cache: true
           run-install: true
+      - name: Enable pnpm
+        run: corepack enable
       - name: Build app bundles
         run: vp run build:desktop
       - name: Package desktop artifact
@@ -72,6 +74,8 @@ jobs:
           node-version-file: package.json
           cache: true
           run-install: true
+      - name: Enable pnpm
+        run: corepack enable
       - name: Build Android APK (release, unsigned unless a keystore is configured)
         run: pnpm --filter @t3tools/mobile build:android
       - uses: actions/upload-artifact@v4
@@ -91,6 +95,8 @@ jobs:
           node-version-file: package.json
           cache: true
           run-install: true
+      - name: Enable pnpm
+        run: corepack enable
       - name: Prebuild iOS project
         run: pnpm --filter @t3tools/mobile prebuild:ios
       - name: Build (simulator, code signing disabled)

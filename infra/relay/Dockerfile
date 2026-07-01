@@ -5,9 +5,12 @@ FROM oven/bun:1.3.10 AS base
 WORKDIR /app
 
 # --- Install workspace dependencies (relay + the packages it imports) ---
-FROM base AS deps
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-  && rm -rf /var/lib/apt/lists/*
+# pnpm is the workspace package manager, and pnpm (plus dependency build scripts
+# such as esbuild) needs Node. The Bun image ships neither Node nor npm, so
+# resolve the workspace graph on a Node image and copy the resulting
+# node_modules into the Bun runtime stage below.
+FROM node:24-bookworm-slim AS deps
+WORKDIR /app
 RUN npm install -g pnpm@10.24.0
 
 # Copy the manifests needed to resolve the workspace graph, then install.
@@ -26,6 +29,9 @@ FROM base AS runtime
 ENV NODE_ENV=production \
     DATABASE_PATH=/data/relay.db \
     PORT=8787
+# curl backs the container HEALTHCHECK defined below.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/infra/relay/node_modules ./infra/relay/node_modules
 COPY package.json pnpm-workspace.yaml ./
