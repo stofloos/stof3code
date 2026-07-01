@@ -53,6 +53,11 @@ import * as DesktopWindow from "./window/DesktopWindow.ts";
 import * as DesktopWslBackend from "./wsl/DesktopWslBackend.ts";
 import * as DesktopWslEnvironment from "./wsl/DesktopWslEnvironment.ts";
 
+// Must run at module load, before Electron emits `ready`: marks the app's
+// custom schemes as standard + secure so the renderer served over them gets a
+// real origin (otherwise CSP `'self'` fails and the React entry is blocked).
+ElectronProtocol.registerDesktopSchemesAsPrivileged();
+
 const desktopEnvironmentLayer = Layer.unwrap(
   Effect.gen(function* () {
     const metadata = yield* Effect.service(ElectronApp.ElectronApp).pipe(

@@ -24,6 +24,31 @@ export function getDesktopUrl(isDevelopment: boolean): string {
   return `${getDesktopOrigin(isDevelopment)}/`;
 }
 
+/**
+ * Marks the desktop app schemes as standard + secure BEFORE the Electron app
+ * emits `ready`. Without this, `protocol.handle` serves the renderer from a
+ * non-standard scheme whose resources get opaque origins, so same-origin script
+ * loads fail ("protocols and ports must match") and the CSP `'self'` never
+ * matches — the renderer stays stuck on the splash because `main.tsx` is blocked.
+ *
+ * Must be called at module load (top of the main entry), not inside a
+ * `whenReady` handler, per Electron's `registerSchemesAsPrivileged` contract.
+ */
+export function registerDesktopSchemesAsPrivileged(): void {
+  Electron.protocol.registerSchemesAsPrivileged(
+    [DESKTOP_PRODUCTION_SCHEME, DESKTOP_DEVELOPMENT_SCHEME].map((scheme) => ({
+      scheme,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        stream: true,
+      },
+    })),
+  );
+}
+
 export class ElectronProtocolRegistrationError extends Schema.TaggedErrorClass<ElectronProtocolRegistrationError>()(
   "ElectronProtocolRegistrationError",
   {

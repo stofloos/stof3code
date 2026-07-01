@@ -44,7 +44,11 @@ import { browserApiCorsAllowedHeaders, browserApiCorsAllowedMethods } from "./ht
 
 const OTLP_TRACES_PROXY_PATH = "/api/observability/v1/traces";
 const LOOPBACK_HOSTNAMES = new Set(["127.0.0.1", "::1", "localhost"]);
-const DESKTOP_RENDERER_ORIGINS = ["t3code://app", "t3code-dev://app"];
+// Must match the desktop custom schemes in
+// apps/desktop/src/electron/ElectronProtocol.ts (DESKTOP_PRODUCTION_SCHEME /
+// DESKTOP_DEVELOPMENT_SCHEME); the renderer makes credentialed CORS requests
+// from these origins, so a stale name here fails every request with a 500.
+const DESKTOP_RENDERER_ORIGINS = ["stofloos://app", "stofloos-dev://app"];
 
 export const browserApiCorsLayer = Layer.unwrap(
   Effect.gen(function* () {
