@@ -1,69 +1,38 @@
-import type { PgClient } from "@effect/sql-pg/PgClient";
-import * as Cloudflare from "alchemy/Cloudflare";
-import * as Drizzle from "alchemy/Drizzle";
-import * as Planetscale from "alchemy/Planetscale";
-import * as Alchemy from "alchemy";
-import * as RemovalPolicy from "alchemy/RemovalPolicy";
-import type { EffectPgDatabase } from "drizzle-orm/effect-postgres";
+import type { SQLiteBunDatabase } from "drizzle-orm/bun-sqlite";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
 
-import { relayDatabaseMode } from "./dbConfig.ts";
+import * as schema from "./persistence/schema.ts";
+import { RELAY_MIGRATIONS } from "./persistence/migrations.ts";
 
-export class RelayDb extends Context.Service<
-  RelayDb,
-  EffectPgDatabase & {
-    readonly $client: PgClient;
-  }
->()("t3code-relay/db/RelayDb") {}
+export type RelayDatabase = SQLiteBunDatabase<typeof schema>;
 
-export const PlanetscaleDatabase = Effect.gen(function* () {
-  const { stage } = yield* Alchemy.Stack;
-  const schema = yield* Drizzle.Schema("RelaySchema", {
-    schema: "./src/persistence/schema.ts",
-    out: "./migrations/postgres",
-    dialect: "postgres",
+/**
+ * The relay's SQLite database (via `bun:sqlite` + drizzle).
+ *
+ * Unlike the previous Cloudflare/Postgres build, drizzle's `bun-sqlite` driver
+ * executes synchronously. Repositories wrap query builders in
+ * `Effect.try(() => query.run()/.all()/.get())` rather than `yield*`-ing them.
+ *
+ * `bun:sqlite` and the drizzle driver are imported lazily inside `makeRelayDb`,
+ * so importing this module (e.g. for the `RelayDb` service tag in unit tests
+ * running under Node) does not require the Bun runtime.
+ */
+export class RelayDb extends Context.Service<RelayDb, RelayDatabase>()("t3code-relay/db/RelayDb") {}
+
+export const makeRelayDb = (databasePath: string): Effect.Effect<RelayDatabase> =>
+  Effect.promise(async () => {
+    const { Database } = await import("bun:sqlite");
+    const { drizzle } = await import("drizzle-orm/bun-sqlite");
+    const sqlite = new Database(databasePath, { create: true });
+    sqlite.exec("PRAGMA journal_mode = WAL;");
+    sqlite.exec("PRAGMA foreign_keys = ON;");
+    for (const statement of RELAY_MIGRATIONS) {
+      sqlite.exec(statement);
+    }
+    return drizzle({ client: sqlite, schema });
   });
 
-  const mode = relayDatabaseMode(stage);
-  const database =
-    mode === "shared-database"
-      ? yield* Planetscale.PostgresDatabase("RelayPostgresDatabase", {
-          name: "t3coderelay",
-          region: { slug: "us-west" },
-          clusterSize: "PS_5",
-          migrationsDir: schema.out,
-          migrationsTable: "relay_migrations",
-          replicas: 0, // BUMP BEFORE GOING TO PROD
-        }).pipe(RemovalPolicy.retain())
-      : yield* Planetscale.PostgresDatabase.ref("RelayPostgresDatabase", {
-          stage: "prod",
-        });
-  const branch =
-    mode === "stage-branch"
-      ? yield* Planetscale.PostgresBranch("RelayPostgresBranch", {
-          database,
-          migrationsDir: schema.out,
-          migrationsTable: "relay_migrations",
-        })
-      : undefined;
-
-  const runtimeRole = yield* Planetscale.PostgresRole("RelayPostgresRuntimeRole", {
-    database,
-    ...(branch ? { branch } : {}),
-    inheritedRoles: ["pg_read_all_data", "pg_write_all_data"],
-  });
-
-  return { branch, database, runtimeRole };
-});
-
-export const RelayHyperdrive = Effect.gen(function* () {
-  const { runtimeRole } = yield* PlanetscaleDatabase;
-  return yield* Cloudflare.Hyperdrive("RelayHyperdrive", {
-    origin: runtimeRole.origin,
-    caching: {
-      disabled: true,
-    },
-    originConnectionLimit: 20,
-  });
-});
+export const layer = (databasePath: string): Layer.Layer<RelayDb> =>
+  Layer.effect(RelayDb, makeRelayDb(databasePath));

@@ -16,7 +16,11 @@ describe("EnvironmentLinks", () => {
           expect(table).toBe(relayEnvironmentLinks);
           return {
             where: () => ({
-              limit: () => Effect.fail(cause),
+              limit: () => ({
+                all: () => {
+                  throw cause;
+                },
+              }),
             }),
           };
         },
@@ -49,7 +53,11 @@ describe("EnvironmentLinks", () => {
         from: (table: unknown) => {
           expect(table).toBe(relayEnvironmentLinks);
           return {
-            where: () => Effect.fail(cause),
+            where: () => ({
+              all: () => {
+                throw cause;
+              },
+            }),
           };
         },
       }),
@@ -89,7 +97,7 @@ describe("EnvironmentLinks", () => {
             return {
               where: (condition: unknown) => {
                 whereConditions.push(condition);
-                return Effect.succeed([]);
+                return { all: () => [] };
               },
             };
           },
@@ -108,7 +116,8 @@ describe("EnvironmentLinks", () => {
       expect(query.sql).toContain('"relay_environment_links"."notifications_enabled" = $2');
       expect(query.sql).toContain('"relay_environment_links"."live_activities_enabled" = $3');
       expect(query.sql).toContain(" or ");
-      expect(query.params).toEqual(["env-1", true, true]);
+      // SQLite boolean columns encode `true` as `1`.
+      expect(query.params).toEqual(["env-1", 1, 1]);
     }).pipe(
       Effect.provide(
         EnvironmentLinks.layer.pipe(Layer.provide(Layer.succeed(RelayDb.RelayDb, fakeDb))),
@@ -131,7 +140,7 @@ describe("EnvironmentLinks", () => {
                 return {
                   returning: (selection: unknown) => {
                     expect(selection).toBeDefined();
-                    return Effect.succeed([{ environmentId: "env-1" }]);
+                    return { all: () => [{ environmentId: "env-1" }] };
                   },
                 };
               },

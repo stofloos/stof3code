@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/react";
 import { ManagedRelay, setManagedRelaySession } from "@t3tools/client-runtime/relay";
 import {
   reportAtomCommandResult,
@@ -12,7 +11,8 @@ import { environmentCatalog } from "../connection/catalog";
 import { runtime } from "../lib/runtime";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { useAtomCommand } from "../state/use-atom-command";
-import { resolveRelayClerkTokenOptions } from "./publicConfig";
+import { readManagedRelaySessionToken } from "./relayAuthStore";
+import { useRelayAuth } from "./useRelayAuth";
 
 let relayTokenProvider: (() => Promise<string | null>) | null = null;
 
@@ -27,19 +27,17 @@ export function deactivateManagedRelayAuthentication(): void {
 
 export function activateManagedRelayAuthentication(
   accountId: string,
-  readClerkToken: () => Promise<string | null>,
+  readSessionToken: () => Promise<string | null>,
 ): void {
-  relayTokenProvider = readClerkToken;
+  relayTokenProvider = readSessionToken;
   setManagedRelaySession(appAtomRegistry, {
     accountId,
-    readClerkToken,
+    readClerkToken: readSessionToken,
   });
 }
 
 export function ManagedRelayAuthProvider({ children }: { readonly children: ReactNode }) {
-  const { getToken, isLoaded, isSignedIn, userId } = useAuth({
-    treatPendingAsSignedOut: false,
-  });
+  const { isSignedIn, userId } = useRelayAuth();
   const removeRelayEnvironments = useAtomCommand(environmentCatalog.removeRelayEnvironments, {
     reportFailure: false,
     reportDefect: false,
@@ -48,10 +46,6 @@ export function ManagedRelayAuthProvider({ children }: { readonly children: Reac
   const accountTransitionRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
     let cancelled = false;
     const previousAccount = observedAccountRef.current;
     const nextAccount = isSignedIn && userId ? userId : null;
@@ -79,14 +73,13 @@ export function ManagedRelayAuthProvider({ children }: { readonly children: Reac
 
     if (!isSignedIn || !userId) {
       deactivateManagedRelayAuthentication();
-      if (previousAccount !== null) {
+      if (previousAccount !== null && previousAccount !== undefined) {
         void queueAccountCleanup();
       }
     } else {
-      const tokenProvider = () => getToken(resolveRelayClerkTokenOptions());
       const activateSession = () => {
         if (!cancelled) {
-          activateManagedRelayAuthentication(userId, tokenProvider);
+          activateManagedRelayAuthentication(userId, readManagedRelaySessionToken);
         }
       };
       const activateAfterTransition = (transition: Promise<void>) => {
@@ -108,7 +101,7 @@ export function ManagedRelayAuthProvider({ children }: { readonly children: Reac
     return () => {
       cancelled = true;
     };
-  }, [getToken, isLoaded, isSignedIn, removeRelayEnvironments, userId]);
+  }, [isSignedIn, removeRelayEnvironments, userId]);
 
   useEffect(() => () => deactivateManagedRelayAuthentication(), []);
 

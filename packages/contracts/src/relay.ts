@@ -993,10 +993,81 @@ export const RelayServerGroup = HttpApiGroup.make("server")
   .annotate(OpenApi.Description, "Environment-authenticated activity publication.")
   .middleware(RelayEnvironmentAuth);
 
+// Relay-as-IdP: the self-hosted relay owns user identities and issues the session
+// token clients exchange (as subject_token) for a DPoP access token.
+export const RelayRegisterRequest = Schema.Struct({
+  email: TrimmedNonEmptyString,
+  password: TrimmedNonEmptyString,
+  inviteCode: Schema.optional(Schema.String),
+}).annotate({ description: "Register a new relay user (relay-as-identity-provider)." });
+export type RelayRegisterRequest = typeof RelayRegisterRequest.Type;
+
+export const RelayLoginRequest = Schema.Struct({
+  email: TrimmedNonEmptyString,
+  password: TrimmedNonEmptyString,
+}).annotate({ description: "Authenticate a relay user and receive a session token." });
+export type RelayLoginRequest = typeof RelayLoginRequest.Type;
+
+export const RelaySessionResponse = Schema.Struct({
+  sessionToken: TrimmedNonEmptyString,
+  userId: TrimmedNonEmptyString,
+  expiresAt: TrimmedNonEmptyString,
+});
+export type RelaySessionResponse = typeof RelaySessionResponse.Type;
+
+export class RelayRegistrationFailedError extends Schema.TaggedErrorClass<RelayRegistrationFailedError>()(
+  "RelayRegistrationFailedError",
+  {
+    code: Schema.Literal("registration_failed"),
+    reason: Schema.Literals([
+      "email_taken",
+      "invite_required",
+      "invite_invalid",
+      "persistence_failed",
+    ]),
+    traceId: TrimmedNonEmptyString,
+  },
+  { httpApiStatus: 400 },
+) {
+  override get message(): string {
+    return `Relay registration failed: ${this.reason}`;
+  }
+}
+
+export class RelayLoginFailedError extends Schema.TaggedErrorClass<RelayLoginFailedError>()(
+  "RelayLoginFailedError",
+  {
+    code: Schema.Literal("login_failed"),
+    reason: Schema.Literals(["invalid_credentials", "persistence_failed"]),
+    traceId: TrimmedNonEmptyString,
+  },
+  { httpApiStatus: 401 },
+) {
+  override get message(): string {
+    return `Relay login failed: ${this.reason}`;
+  }
+}
+
+export const RelayAuthGroup = HttpApiGroup.make("auth")
+  .add(
+    HttpApiEndpoint.post("register", "/v1/auth/register", {
+      payload: RelayRegisterRequest,
+      success: RelaySessionResponse,
+      error: [RelayRegistrationFailedError, RelayInternalError],
+    }).annotate(OpenApi.Summary, "Register a new relay user"),
+    HttpApiEndpoint.post("login", "/v1/auth/login", {
+      payload: RelayLoginRequest,
+      success: RelaySessionResponse,
+      error: [RelayLoginFailedError, RelayInternalError],
+    }).annotate(OpenApi.Summary, "Log in and receive a session token"),
+  )
+  .annotate(OpenApi.Description, "Relay-as-identity-provider registration and login.");
+
 export const RelayApi = HttpApi.make("RelayApi")
   .add(
     RelayHealthGroup,
     RelayMetadataGroup,
+    RelayAuthGroup,
     RelayMobileGroup,
     RelayClientGroup,
     RelayTokenGroup,

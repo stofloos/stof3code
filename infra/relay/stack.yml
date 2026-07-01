@@ -1,0 +1,60 @@
+# Docker Swarm stack for the Stofloos self-hosted relay.
+#   docker stack deploy -c infra/relay/stack.yml stofloos
+#
+# TLS/ingress is intentionally NOT included — front this with your own reverse
+# proxy (Traefik/Caddy/nginx) terminating HTTPS and forwarding to the relay's
+# published port. Clients require an https:// RELAY_PUBLIC_ORIGIN.
+version: "3.8"
+
+services:
+  relay:
+    image: stofloos-relay:latest
+    environment:
+      RELAY_PUBLIC_ORIGIN: "${RELAY_PUBLIC_ORIGIN}"
+      DATABASE_PATH: /data/relay.db
+      PORT: "8787"
+    secrets:
+      - source: relay_cloud_mint_private_key
+        target: RELAY_CLOUD_MINT_PRIVATE_KEY
+      - source: relay_cloud_mint_public_key
+        target: RELAY_CLOUD_MINT_PUBLIC_KEY
+      - source: relay_auth_session_private_key
+        target: RELAY_AUTH_SESSION_PRIVATE_KEY
+      - source: relay_auth_session_public_key
+        target: RELAY_AUTH_SESSION_PUBLIC_KEY
+      - source: relay_registration_invite_code
+        target: RELAY_REGISTRATION_INVITE_CODE
+    # server.ts loads *_FILE-style secrets from /run/secrets/<name> when the
+    # matching env var is unset (see readConfig in src/server.ts).
+    ports:
+      - target: 8787
+        published: 8787
+        protocol: tcp
+        mode: ingress
+    volumes:
+      - relay_data:/data
+    deploy:
+      replicas: 1
+      # SQLite is a single-writer file DB: pin to one node and never run >1 replica.
+      placement:
+        constraints:
+          - node.labels.stofloos_relay == true
+      restart_policy:
+        condition: on-failure
+      update_config:
+        order: stop-first
+
+volumes:
+  relay_data:
+
+secrets:
+  relay_cloud_mint_private_key:
+    external: true
+  relay_cloud_mint_public_key:
+    external: true
+  relay_auth_session_private_key:
+    external: true
+  relay_auth_session_public_key:
+    external: true
+  relay_registration_invite_code:
+    external: true

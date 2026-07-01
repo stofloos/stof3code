@@ -1,9 +1,10 @@
-import { useClerk } from "@clerk/react";
+import { useState } from "react";
+
+import { RelayAuthDialog } from "./RelayAuthDialog";
 
 export function useT3ConnectAuthPrompt() {
-  const clerk = useClerk();
-  const openAuthPrompt = () => {
-    clerk.openWaitlist();
-  };
-  return { authPrompt: null, openAuthPrompt };
+  const [open, setOpen] = useState(false);
+  const openAuthPrompt = () => setOpen(true);
+  const authPrompt = <RelayAuthDialog open={open} onOpenChange={setOpen} />;
+  return { authPrompt, openAuthPrompt };
 }

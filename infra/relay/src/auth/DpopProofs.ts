@@ -53,29 +53,29 @@ const make = Effect.gen(function* () {
   const consume: DpopProofReplay["Service"]["consume"] = Effect.fn("relay.dpop_proofs.consume")(
     function* (input) {
       const createdAt = DateTime.formatIso(yield* DateTime.now);
-      const inserted = yield* db
-        .insert(relayDpopProofs)
-        .values({
-          thumbprint: input.thumbprint,
-          jti: input.jti,
-          iat: input.iat,
-          expiresAt: DateTime.formatIso(input.expiresAt),
-          createdAt,
-        })
-        .onConflictDoNothing()
-        .returning({ jti: relayDpopProofs.jti })
-        .pipe(
-          Effect.mapError(
-            (cause) =>
-              new DpopProofReplayPersistenceError({
-                operation: "consume",
-                thumbprint: input.thumbprint,
-                jti: input.jti,
-                iat: input.iat,
-                cause,
-              }),
-          ),
-        );
+      const inserted = yield* Effect.try({
+        try: () =>
+          db
+            .insert(relayDpopProofs)
+            .values({
+              thumbprint: input.thumbprint,
+              jti: input.jti,
+              iat: input.iat,
+              expiresAt: DateTime.formatIso(input.expiresAt),
+              createdAt,
+            })
+            .onConflictDoNothing()
+            .returning({ jti: relayDpopProofs.jti })
+            .all(),
+        catch: (cause) =>
+          new DpopProofReplayPersistenceError({
+            operation: "consume",
+            thumbprint: input.thumbprint,
+            jti: input.jti,
+            iat: input.iat,
+            cause,
+          }),
+      });
       return inserted.length > 0;
     },
   );
@@ -130,19 +130,15 @@ const make = Effect.gen(function* () {
   const pruneExpired: DpopProofReplay["Service"]["pruneExpired"] = Effect.gen(function* () {
     const now = DateTime.formatIso(yield* DateTime.now);
     yield* Effect.annotateCurrentSpan({ "relay.dpop_prune.before": now });
-    yield* db
-      .delete(relayDpopProofs)
-      .where(lt(relayDpopProofs.expiresAt, now))
-      .pipe(
-        Effect.mapError(
-          (cause) =>
-            new DpopProofReplayPersistenceError({
-              operation: "prune-expired",
-              expiresBefore: now,
-              cause,
-            }),
-        ),
-      );
+    yield* Effect.try({
+      try: () => db.delete(relayDpopProofs).where(lt(relayDpopProofs.expiresAt, now)).run(),
+      catch: (cause) =>
+        new DpopProofReplayPersistenceError({
+          operation: "prune-expired",
+          expiresBefore: now,
+          cause,
+        }),
+    });
   }).pipe(Effect.withSpan("relay.dpop_proofs.prune_expired"));
 
   return DpopProofReplay.of({

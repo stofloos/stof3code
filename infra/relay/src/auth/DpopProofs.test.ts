@@ -33,7 +33,7 @@ describe("DpopProofReplay", () => {
                   returning: (selection: unknown) => {
                     expect(selection).toBeDefined();
                     calls.push("insert.returning");
-                    return Effect.succeed([{ jti: values.jti }]);
+                    return { all: () => [{ jti: values.jti }] };
                   },
                 };
               },
@@ -82,7 +82,7 @@ describe("DpopProofReplay", () => {
           where: (condition: unknown) => {
             expect(condition).toBeDefined();
             calls.push("delete.where");
-            return Effect.void;
+            return { run: () => undefined };
           },
         };
       },
@@ -103,7 +103,11 @@ describe("DpopProofReplay", () => {
       delete: (table: unknown) => {
         expect(table).toBe(relayDpopProofs);
         return {
-          where: () => Effect.fail(cause),
+          where: () => ({
+            run: () => {
+              throw cause;
+            },
+          }),
         };
       },
     } as unknown as RelayDb.RelayDb["Service"];

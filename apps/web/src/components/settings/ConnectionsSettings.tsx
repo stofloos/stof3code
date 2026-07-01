@@ -7,7 +7,6 @@ import {
   TerminalIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { useAuth } from "@clerk/react";
 import { type ReactNode, memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   AuthAccessReadScope,
@@ -50,7 +49,7 @@ import { cn } from "../../lib/utils";
 import { formatElapsedDurationLabel, formatExpiresInLabel } from "../../timestampFormat";
 import { resolveDesktopPairingUrl, resolveHostedPairingUrl } from "./pairingUrls";
 import { applyWslEnableSelection } from "./ConnectionsSettings.logic";
-import { resolveRelayClerkTokenOptions } from "../../cloud/publicConfig";
+import { useRelayAuth } from "../../cloud/useRelayAuth";
 import {
   SettingsPageContainer,
   SettingsRow,
@@ -1627,7 +1626,7 @@ function CloudLinkSwitch({
 }
 
 function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: boolean }) {
-  const { getToken, isSignedIn } = useAuth();
+  const { getToken, isSignedIn } = useRelayAuth();
   const refreshRelayEnvironments = useAtomCommand(relayEnvironmentDiscovery.refresh, {
     reportFailure: false,
   });
@@ -1669,7 +1668,7 @@ function ConfiguredCloudLinkRow({ canManageRelay }: { readonly canManageRelay: b
   const updateLink = async (enabled: boolean) => {
     setIsUpdating(true);
     setOperationError(null);
-    const tokenResult = await settlePromise(() => getToken(resolveRelayClerkTokenOptions()));
+    const tokenResult = await settlePromise(() => getToken());
     if (tokenResult._tag === "Failure") {
       reportUpdateFailure(squashAtomCommandFailure(tokenResult));
       setIsUpdating(false);

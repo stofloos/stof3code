@@ -15,14 +15,18 @@ describe("EnvironmentCredentials", () => {
       insert: (table: unknown) => {
         expect(table).toBe(relayEnvironmentCredentials);
         return {
-          values: () => Effect.void,
+          values: () => ({ run: () => undefined }),
         };
       },
       update: (table: unknown) => {
         expect(table).toBe(relayEnvironmentCredentials);
         return {
           set: () => ({
-            where: () => Effect.fail(cause),
+            where: () => ({
+              run: () => {
+                throw cause;
+              },
+            }),
           }),
         };
       },
@@ -64,7 +68,11 @@ describe("EnvironmentCredentials", () => {
           expect(table).toBe(relayEnvironmentCredentials);
           return {
             where: () => ({
-              limit: () => Effect.fail(cause),
+              limit: () => ({
+                all: () => {
+                  throw cause;
+                },
+              }),
             }),
           };
         },
@@ -114,7 +122,7 @@ describe("EnvironmentCredentials", () => {
           return {
             values: (values: (typeof insertedValues)[number]) => {
               insertedValues.push(values);
-              return Effect.void;
+              return { run: () => undefined };
             },
           };
         },
@@ -124,7 +132,7 @@ describe("EnvironmentCredentials", () => {
             set: (values: Record<string, unknown>) => ({
               where: (condition: unknown) => {
                 staleCredentialRevocations.push({ values, condition });
-                return Effect.void;
+                return { run: () => undefined };
               },
             }),
           };
@@ -192,7 +200,7 @@ describe("EnvironmentCredentials", () => {
                 return {
                   returning: (selection: unknown) => {
                     expect(selection).toBeDefined();
-                    return Effect.succeed([{ credentialId: "credential-1" }]);
+                    return { all: () => [{ credentialId: "credential-1" }] };
                   },
                 };
               },

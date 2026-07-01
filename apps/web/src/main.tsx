@@ -1,8 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ClerkProvider } from "@clerk/react";
-import { passkeys } from "@clerk/electron/passkeys";
-import { ClerkProvider as ElectronClerkProvider } from "@clerk/electron/react";
 import { createHashHistory, createBrowserHistory } from "@tanstack/react-router";
 
 import "@fontsource-variable/dm-sans/index.css";
@@ -27,24 +24,10 @@ if (isElectron) {
   syncDocumentWindowControlsOverlayClass();
 }
 
-const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
-
 const app = <AppRoot router={router} />;
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    {clerkPublishableKey && hasCloudPublicConfig() ? (
-      isElectron ? (
-        <ElectronClerkProvider publishableKey={clerkPublishableKey} passkeys={passkeys}>
-          <ManagedRelayAuthProvider>{app}</ManagedRelayAuthProvider>
-        </ElectronClerkProvider>
-      ) : (
-        <ClerkProvider publishableKey={clerkPublishableKey}>
-          <ManagedRelayAuthProvider>{app}</ManagedRelayAuthProvider>
-        </ClerkProvider>
-      )
-    ) : (
-      app
-    )}
+    {hasCloudPublicConfig() ? <ManagedRelayAuthProvider>{app}</ManagedRelayAuthProvider> : app}
   </React.StrictMode>,
 );

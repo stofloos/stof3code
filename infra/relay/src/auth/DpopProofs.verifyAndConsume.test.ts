@@ -60,9 +60,7 @@ function makeDpopProof(input: {
 }
 
 function layer(
-  insert: (
-    values: DpopProofInsertValues,
-  ) => Effect.Effect<ReadonlyArray<{ readonly jti: string }>, { _tag: string }>,
+  insert: (values: DpopProofInsertValues) => ReadonlyArray<{ readonly jti: string }>,
 ) {
   const fakeDb = {
     insert: (table: unknown) => {
@@ -72,7 +70,7 @@ function layer(
           onConflictDoNothing: () => ({
             returning: (selection: unknown) => {
               expect(selection).toBeDefined();
-              return insert(values);
+              return { all: () => insert(values) };
             },
           }),
         }),
@@ -84,15 +82,14 @@ function layer(
 
 function consumeEachProofOnce() {
   const consumed = new Set<string>();
-  return (values: DpopProofInsertValues) =>
-    Effect.sync(() => {
-      const key = `${values.thumbprint}:${values.jti}`;
-      if (consumed.has(key)) {
-        return [];
-      }
-      consumed.add(key);
-      return [{ jti: values.jti }];
-    });
+  return (values: DpopProofInsertValues): ReadonlyArray<{ readonly jti: string }> => {
+    const key = `${values.thumbprint}:${values.jti}`;
+    if (consumed.has(key)) {
+      return [];
+    }
+    consumed.add(key);
+    return [{ jti: values.jti }];
+  };
 }
 
 describe("DpopProofReplay.verifyAndConsume", () => {
@@ -152,7 +149,13 @@ describe("DpopProofReplay.verifyAndConsume", () => {
       );
 
       expect(result._tag).toBe("Failure");
-    }).pipe(Effect.provide(layer(() => Effect.die("unexpected DPoP replay persistence"))));
+    }).pipe(
+      Effect.provide(
+        layer(() => {
+          throw new Error("unexpected DPoP replay persistence");
+        }),
+      ),
+    );
   });
 
   it.effect("preserves replay persistence failures", () => {
@@ -186,7 +189,13 @@ describe("DpopProofReplay.verifyAndConsume", () => {
       });
       expect(error.cause).toBe(cause);
       expect(error).not.toHaveProperty("proof");
-    }).pipe(Effect.provide(layer(() => Effect.fail(cause))));
+    }).pipe(
+      Effect.provide(
+        layer(() => {
+          throw cause;
+        }),
+      ),
+    );
   });
 
   it.effect("accepts proofs bound to the access token hash", () => {

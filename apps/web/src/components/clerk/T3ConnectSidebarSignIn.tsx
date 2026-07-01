@@ -1,9 +1,9 @@
-import { UserButton, useAuth } from "@clerk/react";
-import { LogInIcon, SmartphoneIcon } from "lucide-react";
+import { LogInIcon, LogOutIcon, UserRoundIcon } from "lucide-react";
 
 import { hasCloudPublicConfig } from "../../cloud/publicConfig";
+import { useRelayAuth } from "../../cloud/useRelayAuth";
+import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
-import { MobileClientsUserProfilePage } from "./MobileClientsUserProfilePage";
 import { useT3ConnectAuthPrompt } from "./useT3ConnectAuthPrompt";
 
 export function T3ConnectSidebarSignIn() {
@@ -19,35 +19,44 @@ export function T3ConnectSidebarAvatar() {
 }
 
 function ConfiguredT3ConnectSidebarAvatar() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isSignedIn, email, logout } = useRelayAuth();
 
-  if (!isLoaded || !isSignedIn) return null;
+  if (!isSignedIn) return null;
 
   return (
-    <UserButton
-      appearance={{
-        elements: {
-          avatarBox: "size-7",
-          userButtonTrigger: "rounded-lg p-1 hover:bg-sidebar-accent",
-        },
-      }}
-    >
-      <UserButton.UserProfilePage
-        label="Mobile clients"
-        labelIcon={<SmartphoneIcon className="size-4" />}
-        url="mobile-clients"
-      >
-        <MobileClientsUserProfilePage />
-      </UserButton.UserProfilePage>
-    </UserButton>
+    <Menu>
+      <MenuTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Stofloos account"
+            className="flex size-7 items-center justify-center rounded-lg p-1 hover:bg-sidebar-accent"
+          >
+            <UserRoundIcon className="size-4" />
+          </button>
+        }
+      />
+      <MenuPopup align="end" className="min-w-48">
+        {email ? (
+          <>
+            <div className="truncate px-2 py-1.5 text-xs text-muted-foreground">{email}</div>
+            <MenuSeparator />
+          </>
+        ) : null}
+        <MenuItem onClick={() => logout()}>
+          <LogOutIcon className="size-4" />
+          <span>Sign out</span>
+        </MenuItem>
+      </MenuPopup>
+    </Menu>
   );
 }
 
 function ConfiguredT3ConnectSidebarSignIn() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isSignedIn } = useRelayAuth();
   const { authPrompt, openAuthPrompt } = useT3ConnectAuthPrompt();
 
-  if (!isLoaded || isSignedIn) return null;
+  if (isSignedIn) return null;
 
   return (
     <>
@@ -59,7 +68,7 @@ function ConfiguredT3ConnectSidebarSignIn() {
             onClick={openAuthPrompt}
           >
             <LogInIcon className="size-4" />
-            <span>Sign in to T3 Connect</span>
+            <span>Sign in to Stofloos</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

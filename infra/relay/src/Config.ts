@@ -1,30 +1,21 @@
 import * as Context from "effect/Context";
 import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
-import * as Schema from "effect/Schema";
-
-export const ApnsEnvironment = Schema.Literals(["sandbox", "production"]);
-export type ApnsEnvironment = typeof ApnsEnvironment.Type;
-
-export interface ApnsCredentials {
-  readonly teamId: string;
-  readonly keyId: string;
-  readonly privateKey: Redacted.Redacted<string>;
-  readonly bundleId: string;
-  readonly environment: ApnsEnvironment;
-}
 
 export class RelayConfiguration extends Context.Service<
   RelayConfiguration,
   {
     readonly relayIssuer: string;
-    readonly apns: ApnsCredentials;
-    readonly clerkSecretKey: Redacted.Redacted<string>;
-    readonly clerkPublishableKey: string;
-    readonly clerkJwtAudience: string;
-    readonly apnsDeliveryJobSigningSecret: Redacted.Redacted<string>;
+    // Cloud mint keypair: signs DPoP access tokens and link challenges (EdDSA PEM).
     readonly cloudMintPrivateKey: Redacted.Redacted<string>;
     readonly cloudMintPublicKey: string;
+    // Auth session keypair: signs login session JWTs (relay-as-IdP, EdDSA PEM).
+    readonly authSessionPrivateKey: Redacted.Redacted<string>;
+    readonly authSessionPublicKey: string;
+    // Optional invite code gating new-user registration. `null` = open registration.
+    readonly registrationInviteCode: Redacted.Redacted<string> | null;
+    // Managed (Cloudflare-tunnel) endpoints are disabled in the self-hosted build;
+    // these stay `undefined` so ManagedEndpointProvider runs in self-managed mode.
     readonly managedEndpointBaseDomain: string | undefined;
     readonly managedEndpointNamespace: string | undefined;
   }
